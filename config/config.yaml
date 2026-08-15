@@ -1,0 +1,99 @@
+pipeline:
+  name: "FrontierAtlas Intelligence Pipeline"
+  environment: "development"
+  log_level: "INFO"
+  db_url: "sqlite:///data/frontier_atlas.db"
+
+crawler:
+  user_agent: "FrontierAtlas-Bot/1.0 (+https://github.com/frontieratlas)"
+  timeout_seconds: 20
+  max_retries: 4
+  initial_backoff_seconds: 1.0
+  max_backoff_seconds: 30.0
+  backoff_factor: 2.0
+  jitter: true
+  max_concurrent_requests: 10
+
+llm:
+  default_provider: "gemini"
+  fallback_chain:
+    - "gemini"
+    - "groq"
+    - "deepseek"
+  providers:
+    gemini:
+      model: "gemini-1.5-flash"
+      max_tokens: 4096
+      temperature: 0.1
+      rate_limit_per_min: 15
+    groq:
+      model: "llama-3.1-70b-versatile"
+      max_tokens: 4096
+      temperature: 0.1
+      rate_limit_per_min: 30
+    deepseek:
+      model: "deepseek-chat"
+      max_tokens: 4096
+      temperature: 0.1
+      rate_limit_per_min: 60
+
+entity_resolution:
+  fuzzy_threshold: 85.0
+  seed_entities:
+    - "OpenAI"
+    - "Anthropic"
+    - "Google DeepMind"
+    - "Meta AI"
+    - "Microsoft AI"
+    - "Mistral AI"
+    - "Cohere"
+    - "Scale AI"
+    - "Hugging Face"
+    - "Perplexity AI"
+    - "Stability AI"
+    - "Midjourney"
+    - "Runway"
+    - "ElevenLabs"
+    - "Pinecone"
+    - "Weaviate"
+    - "Qdrant"
+    - "Chroma"
+    - "LangChain"
+    - "LlamaIndex"
+    - "Anyscale"
+    - "Together AI"
+    - "Groq"
+    - "Cerebras"
+    - "SambaNova"
+    - "Modal"
+    - "Baseten"
+    - "Replicate"
+    - "Fireworks AI"
+    - "Databricks"
+    - "Snowflake"
+    - "Weights & Biases"
+    - "Neptune.ai"
+    - "Comet"
+    - "Vellum"
+    - "Portkey"
+    - "Humanloop"
+    - "Honeyhive"
+    - "Braintrust"
+    - "PromptLayer"
+    - "Helicone"
+    - "Arize AI"
+    - "Arthur AI"
+    - "Cleanlab"
+    - "Supervisely"
+    - "Roboflow"
+    - "Labelbox"
+    - "V7"
+    - "Scale AI"
+    - "Appen"
+
+targets:
+  startups: 1000
+  products: 1000
+  research_papers: 1000
+  news_freshness_hours: 24
+  jobs_freshness_hours: 24
