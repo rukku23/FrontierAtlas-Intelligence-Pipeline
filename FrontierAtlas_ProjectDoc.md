@@ -250,14 +250,21 @@ The system's defining engineering commitment, restated: **nothing is ever added 
 ## 9. LLM Extraction & Fallback Engine
 
 ```
-chunk(text) → estimate_tokens → fits in Tier-1 budget?
-   → Gemini Flash
-        → success → validate → done
-        → 429     → backoff+jitter → retry (bounded) → still failing → Tier 2
-        → other error → log → Tier 2
-   → Groq Llama 3  (same retry/fallback logic)
-   → DeepSeek       (final tier; failure here = record quarantined, not fabricated)
+record → check deterministic API fields (YC API / HF Spaces API / ArXiv API)
+   → Complete metadata available?
+        → YES → Skip LLM, map fields deterministically (0 quota consumed)
+        → NO  → estimate_tokens → fits in Tier-1 budget?
+                 → Gemini Flash
+                      → success → validate → done
+                      → 429 quota exhaustion → set quota_exhausted=True → fast-fail remaining LLMs
+                      → 429 transient → backoff+jitter → retry (bounded) → Tier 2
+                 → Groq Llama 3  (same retry/fallback logic)
+                 → DeepSeek       (final tier; failure here = record saved deterministically)
 ```
+
+The orchestrator enforces a **Deterministic-First Policy**: authoritative API sources (YC API for Startups, Hugging Face Spaces API for Products, ArXiv XML API & GitHub REST API for Research Papers) are mapped directly into Pydantic models. The LLM is invoked only when required fields cannot be deterministically extracted from API metadata.
+
+If a provider encounters a 429 `RESOURCE_EXHAUSTED` (daily/tier quota limit), `LLMOrchestrator` sets `quota_exhausted = True` and fast-fails remaining LLM calls without making network requests or entering infinite retry loops. The pipeline gracefully continues processing 1,000+ records using authoritative deterministic fields without failing.
 
 The orchestrator is built behind a single `LLMProvider` interface with `GeminiProvider`, `GroqProvider`, `DeepSeekProvider` implementations, so adding or reordering a tier is a config change. Scraped content is treated as **untrusted input**: prompts are structured so that any instruction-like text embedded in a webpage ("ignore previous instructions...") is inert — it is passed only as data inside a clearly delimited content block, never concatenated into the system/instruction portion of the prompt, and the model's output is *always* re-validated against the Pydantic schema regardless of what the page tried to say. This is a direct, practical defense against prompt injection via scraped content.
 

@@ -364,3 +364,170 @@ class TestGeminiProviderAndKeys:
             mock_client.models.generate_content.assert_called_once()
             called_kwargs = mock_client.models.generate_content.call_args.kwargs
             assert called_kwargs.get("model") == "gemini-3.6-flash"
+
+
+# =============================================================================
+# DETERMINISTIC-FIRST EXTRACTION & QUOTA EXHAUSTION RESILIENCE
+# =============================================================================
+
+class TestDeterministicFirstExtraction:
+    """Verify deterministic-first extraction policy and quota exhaustion resilience."""
+
+    @pytest.mark.asyncio
+    async def test_startup_with_complete_yc_metadata_skips_llm(self):
+        """A startup with complete YC metadata should not call LLM."""
+        from src.main import _llm_enrich_startup
+        from src.schemas import Startup
+        from src.utils.metrics import PipelineMetrics
+        from unittest.mock import MagicMock
+
+        metrics = PipelineMetrics()
+        mock_orchestrator = MagicMock()
+
+        complete_startup = Startup(
+            name="Complete Startup",
+            source_url="https://yc.com/complete",
+            description="Complete YC description provided directly by API",
+            categories=["AI", "Enterprise"]
+        )
+
+        result = await _llm_enrich_startup(mock_orchestrator, complete_startup, complete_startup.description, metrics)
+        assert result.name == "Complete Startup"
+        assert metrics.llm_extractions_skipped == 1
+        assert metrics.llm_extractions_attempted == 0
+        mock_orchestrator.extract_structured.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_product_with_complete_hf_metadata_skips_llm(self):
+        """A product with complete HF metadata should not call LLM."""
+        from src.main import _llm_enrich_product
+        from src.schemas import Product
+        from src.utils.metrics import PipelineMetrics
+        from unittest.mock import MagicMock
+
+        metrics = PipelineMetrics()
+        mock_orchestrator = MagicMock()
+
+        complete_product = Product(
+            name="Complete Product",
+            source_url="https://huggingface.co/spaces/test/product",
+            description="Complete HF Space description provided directly by API",
+            categories=["text-to-image"]
+        )
+
+        result = await _llm_enrich_product(mock_orchestrator, complete_product, "Sample README content", metrics)
+        assert result.name == "Complete Product"
+        assert metrics.llm_extractions_skipped == 1
+        assert metrics.llm_extractions_attempted == 0
+        mock_orchestrator.extract_structured.assert_not_called()
+
+    def test_paper_with_complete_arxiv_github_metadata_is_deterministic(self):
+        """Papers with complete ArXiv/GitHub API fields require zero LLM calls."""
+        from src.schemas import ResearchPaper
+        paper = ResearchPaper(
+            title="Deterministic Paper",
+            authors=["Author One"],
+            paper_url="https://arxiv.org/abs/2026.12345",
+            source_url="https://arxiv.org/abs/2026.12345",
+            abstract="Sample abstract describing LLM-free extraction",
+            github_repository_url="https://github.com/test/paper-code",
+            github_stars=500
+        )
+        assert paper.title == "Deterministic Paper"
+        assert paper.github_stars == 500
+        assert paper.source == "arxiv"
+
+    @pytest.mark.asyncio
+    async def test_llm_invoked_only_when_required_fields_missing(self):
+        """LLM is invoked only when startup description/categories are incomplete."""
+        from src.main import _llm_enrich_startup
+        from src.schemas import Startup
+        from src.utils.metrics import PipelineMetrics
+        from unittest.mock import AsyncMock, MagicMock
+
+        metrics = PipelineMetrics()
+        mock_orchestrator = MagicMock()
+        mock_orchestrator.extract_structured = AsyncMock(return_value=Startup(
+            name="Incomplete Startup",
+            source_url="https://yc.com/inc",
+            description="LLM Enriched Description",
+            categories=["LLM-Category"]
+        ))
+
+        incomplete_startup = Startup(
+            name="Incomplete Startup",
+            source_url="https://yc.com/inc",
+            description=None,
+            categories=[]
+        )
+
+        result = await _llm_enrich_startup(mock_orchestrator, incomplete_startup, "Raw description text longer than 50 chars for extraction", metrics)
+        assert metrics.llm_extractions_attempted == 1
+        assert result.description == "LLM Enriched Description"
+        assert result.categories == ["LLM-Category"]
+        mock_orchestrator.extract_structured.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_gemini_429_quota_exhaustion_fast_fails_without_infinite_loop(self):
+        """Gemini 429 quota error sets quota_exhausted and fast-fails subsequent requests."""
+        from src.extraction.llm_orchestrator import LLMOrchestrator
+        from src.schemas import Startup
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_provider = MagicMock()
+        mock_provider.name = "GeminiProvider"
+        mock_provider.api_key = "valid-key"
+        mock_provider.extract = AsyncMock(side_effect=Exception("429 RESOURCE_EXHAUSTED: Quota exceeded for metric"))
+
+        orchestrator = LLMOrchestrator(providers=[mock_provider])
+
+        result1 = await orchestrator.extract_structured("Text for extraction", Startup)
+        assert result1 is None
+        assert orchestrator.quota_exhausted is True
+
+        mock_provider.extract.reset_mock()
+
+        result2 = await orchestrator.extract_structured("Another text for extraction", Startup)
+        assert result2 is None
+        mock_provider.extract.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_pipeline_continues_processing_after_llm_quota_failure(self):
+        """Pipeline continues saving valid deterministic records even after LLM quota exhaustion."""
+        from src.main import run_pipeline
+        from unittest.mock import patch, AsyncMock
+
+        test_db_url = "sqlite:///:memory:"
+
+        with patch("src.main.LLMOrchestrator") as mock_orch_cls, \
+             patch("src.storage.db.get_config") as mock_cfg, \
+             patch("src.utils.config.get_config") as mock_cfg_util:
+
+            def _mock_get(key, default=None):
+                if "db_url" in key:
+                    return test_db_url
+                return default
+            mock_cfg.return_value.get.side_effect = _mock_get
+            mock_cfg_util.return_value.get.side_effect = _mock_get
+
+            mock_orch_instance = MagicMock()
+            mock_orch_instance.providers = [MagicMock(api_key="dummy")]
+            mock_orch_instance.quota_exhausted = False
+
+            async def mock_extract(*args, **kwargs):
+                mock_orch_instance.quota_exhausted = True
+                return None
+            mock_orch_instance.extract_structured = AsyncMock(side_effect=mock_extract)
+            mock_orch_cls.return_value = mock_orch_instance
+
+            metrics = await run_pipeline(
+                paper_limit=2,
+                startup_limit=2,
+                product_limit=2,
+                export_sheets=False,
+                db_url=test_db_url
+            )
+
+            assert metrics.records_discovered > 0
+            assert metrics.records_processed > 0
+            assert mock_orch_instance.quota_exhausted is True

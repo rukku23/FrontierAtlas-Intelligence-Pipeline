@@ -38,25 +38,35 @@ async def _llm_enrich_startup(
 ) -> Startup:
     """Use LLM to extract structured fields from startup description text.
 
-    Only enriches fields that benefit from LLM structuring.
-    Never overwrites authoritative API fields (name, website, team_size, etc.)
+    Deterministic-first policy: If YC API metadata already provides
+    description and categories, skip LLM call to save quota.
     """
-    if not raw_description or len(raw_description) < 50:
+    if startup.description and startup.categories and len(startup.categories) > 0:
+        logger.debug(f"Startup '{startup.name}' has complete YC metadata — skipping LLM.",
+                     extra={"component": "PipelineMain"})
+        metrics.llm_extractions_skipped += 1
+        metrics.deterministic_extractions += 1
         return startup
 
+    if not raw_description or len(raw_description) < 50:
+        metrics.deterministic_extractions += 1
+        return startup
+
+    metrics.llm_extractions_attempted += 1
     try:
-        result = await orchestrator.extract_structured(raw_description, Startup)
+        result = await orchestrator.extract_structured(raw_description, Startup, metrics=metrics)
         if result:
-            # Only take LLM-extracted fields that enhance the record
-            # NEVER overwrite authoritative fields from YC API
             if result.description and not startup.description:
                 startup.description = result.description
             if result.categories and len(result.categories) > len(startup.categories or []):
                 startup.categories = result.categories
-            metrics.llm_fallbacks += 1  # Track LLM usage
+            metrics.deterministic_extractions += 1
+        else:
+            metrics.deterministic_extractions += 1
     except Exception as e:
         logger.debug(f"LLM enrichment skipped for startup '{startup.name}': {e}",
                      extra={"component": "PipelineMain"})
+        metrics.deterministic_extractions += 1
 
     return startup
 
@@ -69,22 +79,35 @@ async def _llm_enrich_product(
 ) -> Product:
     """Use LLM to extract structured product fields from Space README content.
 
-    Enriches description and categories. Never fabricates pricing.
+    Deterministic-first policy: If HF Spaces metadata already provides
+    description and categories, skip LLM call to save quota.
     """
-    if not readme_content or len(readme_content) < 50:
+    if product.description and product.categories and len(product.categories) > 0:
+        logger.debug(f"Product '{product.name}' has complete HF metadata — skipping LLM.",
+                     extra={"component": "PipelineMain"})
+        metrics.llm_extractions_skipped += 1
+        metrics.deterministic_extractions += 1
         return product
 
+    if not readme_content or len(readme_content) < 50:
+        metrics.deterministic_extractions += 1
+        return product
+
+    metrics.llm_extractions_attempted += 1
     try:
-        result = await orchestrator.extract_structured(readme_content, Product)
+        result = await orchestrator.extract_structured(readme_content, Product, metrics=metrics)
         if result:
             if result.description and (not product.description or len(result.description) > len(product.description)):
                 product.description = result.description
-            if result.categories:
+            if result.categories and len(result.categories) > len(product.categories or []):
                 product.categories = result.categories
-            metrics.llm_fallbacks += 1
+            metrics.deterministic_extractions += 1
+        else:
+            metrics.deterministic_extractions += 1
     except Exception as e:
         logger.debug(f"LLM enrichment skipped for product '{product.name}': {e}",
                      extra={"component": "PipelineMain"})
+        metrics.deterministic_extractions += 1
 
     return product
 
@@ -100,17 +123,23 @@ async def _llm_extract_news_content(
     the news crawler's content fetch phase.
     """
     if not article.content or len(article.content) < 200:
+        metrics.deterministic_extractions += 1
+        metrics.llm_extractions_skipped += 1
         return article
 
+    metrics.llm_extractions_attempted += 1
     try:
-        result = await orchestrator.extract_structured(article.content, News)
+        result = await orchestrator.extract_structured(article.content, News, metrics=metrics)
         if result:
             if result.summary and len(result.summary) > 50:
                 article.summary = result.summary
-            metrics.llm_fallbacks += 1
+            metrics.deterministic_extractions += 1
+        else:
+            metrics.deterministic_extractions += 1
     except Exception as e:
         logger.debug(f"LLM extraction skipped for news '{article.title[:40]}': {e}",
                      extra={"component": "PipelineMain"})
+        metrics.deterministic_extractions += 1
 
     return article
 
@@ -122,15 +151,7 @@ async def run_pipeline(
     export_sheets: bool = True,
     db_url: Optional[str] = None
 ) -> PipelineMetrics:
-    """Run the complete end-to-end FrontierAtlas intelligence pipeline.
-
-    Architecture per entity type:
-      Papers:   ArXiv API → Direct fields → GitHub regex → GitHub API stars → Save
-      Startups: YC-OSS API → Direct fields → LLM enrichment (description) → Save
-      Products: HF Spaces API → Direct fields → LLM enrichment (README) → Save
-      News:     RSS → Freshness filter → Full text fetch → LLM extraction → Save
-      Jobs:     RSS/JSON → Freshness filter → Direct fields → Save
-    """
+    """Run the complete end-to-end FrontierAtlas intelligence pipeline."""
     metrics = PipelineMetrics()
     logger.info("Starting FrontierAtlas Intelligence Pipeline...", extra={"component": "PipelineMain"})
 
@@ -147,8 +168,7 @@ async def run_pipeline(
         logger.info(f"LLM orchestrator initialized with {len(orchestrator.providers)} providers",
                      extra={"component": "PipelineMain"})
     else:
-        logger.warning("No LLM API keys configured — running without LLM extraction. "
-                       "Set GEMINI_API_KEY, GROQ_API_KEY, or DEEPSEEK_API_KEY for full extraction.",
+        logger.warning("No LLM API keys configured — running with deterministic extraction.",
                        extra={"component": "PipelineMain"})
 
     async with base_crawler:
@@ -166,9 +186,9 @@ async def run_pipeline(
         unique_papers = dedup.filter_duplicates(raw_papers)
         metrics.duplicates += (len(raw_papers) - len(unique_papers))
 
-        # Enrich GitHub stars for papers with legitimate GitHub links
-        # (extracted by regex from paper's own abstract/comments, not LLM)
         for paper in unique_papers:
+            metrics.deterministic_extractions += 1
+            metrics.llm_extractions_skipped += 1
             if paper.github_repository_url:
                 stars = await github_enricher.get_star_count(paper.github_repository_url)
                 if stars is not None:
@@ -182,7 +202,7 @@ async def run_pipeline(
         # STAGE 2: STARTUPS (YC-OSS API) & ENTITY RESOLUTION
         # Discovery: YC-OSS API (real verified startups)
         # Direct fields: name, website, team_size, location, stage
-        # LLM enrichment: extract categories from long_description
+        # LLM enrichment: extract categories if not deterministically available
         # -------------------------------------------------------------
         logger.info("=== STAGE 2: Startup Pipeline (YC-OSS API) ===", extra={"component": "PipelineMain"})
         startup_crawler = StartupCrawler(crawler=base_crawler)
@@ -199,15 +219,13 @@ async def run_pipeline(
         unique_startups = dedup.filter_duplicates(raw_startups)
         metrics.duplicates += (len(raw_startups) - len(unique_startups))
 
-        # LLM enrichment for startup descriptions (if LLM available)
-        if llm_available:
-            enriched_count = 0
-            for s in unique_startups[:50]:  # Cap LLM calls at 50 for rate limits
-                if s.description and len(s.description) > 50:
-                    s = await _llm_enrich_startup(orchestrator, s, s.description, metrics)
-                    enriched_count += 1
-            logger.info(f"LLM-enriched {enriched_count} startup descriptions",
-                        extra={"component": "PipelineMain"})
+        # LLM enrichment for startups (deterministic-first, quota safe)
+        for s in unique_startups:
+            if llm_available and not orchestrator.quota_exhausted:
+                s = await _llm_enrich_startup(orchestrator, s, s.description, metrics)
+            else:
+                metrics.llm_extractions_skipped += 1
+                metrics.deterministic_extractions += 1
 
         saved_startups = db.save_startups(unique_startups)
         metrics.records_processed += saved_startups
@@ -227,33 +245,32 @@ async def run_pipeline(
         for p in raw_products:
             if p.company_name:
                 res = resolver.resolve(p.company_name, p.source_url)
-                p.canonical_name = p.name  # Product retains product name
+                p.canonical_name = p.name
                 if res.match_method != "UNRESOLVED":
                     metrics.entity_matches += 1
 
         unique_products = dedup.filter_duplicates(raw_products)
         metrics.duplicates += (len(raw_products) - len(unique_products))
 
-        # LLM enrichment from Space README content (if LLM available)
-        if llm_available:
-            enriched_count = 0
-            for p in unique_products[:50]:  # Cap at 50 for rate limits
-                space_id = p.source_url.replace("https://huggingface.co/spaces/", "")
-                readme = await product_crawler.fetch_space_readme(space_id)
-                if readme:
+        # LLM enrichment from Space README content (deterministic-first, quota safe)
+        for p in unique_products:
+            if llm_available and not orchestrator.quota_exhausted:
+                if not (p.description and p.categories and len(p.categories) > 0):
+                    space_id = p.source_url.replace("https://huggingface.co/spaces/", "")
+                    readme = await product_crawler.fetch_space_readme(space_id)
                     p = await _llm_enrich_product(orchestrator, p, readme, metrics)
-                    enriched_count += 1
-            logger.info(f"LLM-enriched {enriched_count} product descriptions from READMEs",
-                        extra={"component": "PipelineMain"})
+                else:
+                    metrics.llm_extractions_skipped += 1
+                    metrics.deterministic_extractions += 1
+            else:
+                metrics.llm_extractions_skipped += 1
+                metrics.deterministic_extractions += 1
 
         saved_products = db.save_products(unique_products)
         metrics.records_processed += saved_products
 
         # -------------------------------------------------------------
         # STAGE 4: NEWS PIPELINE (24H FRESHNESS + FULL TEXT + LLM)
-        # Discovery: RSS feeds → freshness filter
-        # Content fetch: follows article_url for full text
-        # LLM extraction: full text → structured summary
         # -------------------------------------------------------------
         logger.info("=== STAGE 4: News Pipeline (24h Freshness + Full Text) ===", extra={"component": "PipelineMain"})
         news_crawler = NewsCrawler(crawler=base_crawler)
@@ -261,10 +278,12 @@ async def run_pipeline(
         metrics.records_discovered += len(fresh_news)
         metrics.fresh_records += len(fresh_news)
 
-        # LLM extraction on full article content (if LLM available)
-        if llm_available:
-            for article in fresh_news:
+        for article in fresh_news:
+            if llm_available and not orchestrator.quota_exhausted:
                 article = await _llm_extract_news_content(orchestrator, article, metrics)
+            else:
+                metrics.llm_extractions_skipped += 1
+                metrics.deterministic_extractions += 1
 
         unique_news = dedup.filter_duplicates(fresh_news)
         metrics.duplicates += (len(fresh_news) - len(unique_news))
@@ -273,9 +292,6 @@ async def run_pipeline(
 
         # -------------------------------------------------------------
         # STAGE 5: JOB PIPELINE (24H FRESHNESS FILTERED)
-        # Discovery: RSS/JSON APIs → freshness filter
-        # Direct fields: company, role, description (from RSS/JSON content)
-        # Heuristic: role_family classification from title/description
         # -------------------------------------------------------------
         logger.info("=== STAGE 5: Job Pipeline (24h Freshness) ===", extra={"component": "PipelineMain"})
         job_crawler = JobCrawler(crawler=base_crawler)
@@ -283,8 +299,9 @@ async def run_pipeline(
         metrics.records_discovered += len(fresh_jobs)
         metrics.fresh_records += len(fresh_jobs)
 
-        # Entity resolution on job company names
         for j in fresh_jobs:
+            metrics.deterministic_extractions += 1
+            metrics.llm_extractions_skipped += 1
             res = resolver.resolve(j.company_name, j.source_url)
             j.canonical_company_name = res.canonical_name
             if res.match_method != "UNRESOLVED":

@@ -14,13 +14,14 @@ It acquires real AI ecosystem entities across five domain verticals:
 ## Technical Features
 
 - **Anti-Hallucination Data Integrity**: Every record carries an unbroken provenance `source_url`. Missing fields default to `null`. GitHub stars are fetched directly from GitHub's REST API.
+- **Deterministic-First Extraction Policy**: Authoritative API fields (YC API for Startups, Hugging Face Spaces API for Products, ArXiv XML API & GitHub REST API for Research Papers) are mapped deterministically. LLM extraction is reserved for genuinely unstructured fields, drastically reducing API quota consumption.
 - **Async HTTP Crawler**: Built on `httpx.AsyncClient` with connection pooling, configurable `asyncio.Semaphore` concurrency limits, exponential backoff, jitter, and status code handling (200 success, 429 retry, 404 reject).
-- **3-Tier LLM Provider Fallback**: Fallback chain (Gemini 1.5 Flash → Groq Llama 3 → DeepSeek) with 429 rate-limit backoff and prompt injection containment (`<untrusted_web_content>`).
+- **3-Tier LLM Provider Fallback & Quota Protection**: Fallback chain (Gemini 3.5 Flash → Groq Llama 3 → DeepSeek) with 429 rate-limit backoff, prompt injection containment (`<untrusted_web_content>`), and quota-exhaustion fast-failing to ensure large crawling runs complete cleanly even if API quotas are exhausted.
 - **Token-Aware 413 Chunking**: `SemanticChunker` pre-flights content, reserving output token budgets and preserving paragraph semantic boundaries.
 - **Deterministic Entity Resolution**: RapidFuzz fuzzy matching against ~50 canonical AI entities with alias normalization and a strict 85% confidence threshold.
 - **SQLite / SQLAlchemy Storage**: Portable relational ORM schema with unique SHA-256 deduplication keys.
 - **Google Sheets Export**: Export to 6 tabs (Startups, Products, Research Papers, Jobs, News, Entity Mapping Log) via batched updates.
-- **Comprehensive Test Suite**: 34 passing `pytest` unit and integration tests.
+- **Comprehensive Test Suite**: 63 passing `pytest` unit and integration tests.
 
 ---
 

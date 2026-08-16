@@ -14,6 +14,10 @@ class PipelineMetrics:
         self.stale_records = 0
         self.entity_matches = 0
         self.github_stars_enriched = 0
+        self.deterministic_extractions = 0
+        self.llm_extractions_attempted = 0
+        self.llm_extractions_skipped = 0
+        self.gemini_429s = 0
         self.llm_fallbacks = 0
 
     def to_dict(self) -> Dict[str, int]:
@@ -26,6 +30,10 @@ class PipelineMetrics:
             "stale_records": self.stale_records,
             "entity_matches": self.entity_matches,
             "github_stars_enriched": self.github_stars_enriched,
+            "deterministic_extractions": self.deterministic_extractions,
+            "llm_extractions_attempted": self.llm_extractions_attempted,
+            "llm_extractions_skipped": self.llm_extractions_skipped,
+            "gemini_429s": self.gemini_429s,
             "llm_fallbacks": self.llm_fallbacks,
         }
 
@@ -33,14 +41,19 @@ class PipelineMetrics:
         d = self.to_dict()
         return (
             "=== PIPELINE RUN METRICS SUMMARY ===\n"
-            f"  Discovered Records:    {d['records_discovered']}\n"
-            f"  Processed & Saved:     {d['records_processed']}\n"
-            f"  Rejected Records:      {d['records_rejected']}\n"
-            f"  Duplicates Filtered:   {d['duplicates']}\n"
-            f"  Fresh (<=24h) Records: {d['fresh_records']}\n"
-            f"  Stale Records:         {d['stale_records']}\n"
-            f"  Entity Match Hits:     {d['entity_matches']}\n"
-            f"  GitHub Stars Enriched: {d['github_stars_enriched']}\n"
+            f"  Discovered Records:        {d['records_discovered']}\n"
+            f"  Processed & Saved:         {d['records_processed']}\n"
+            f"  Rejected Records:          {d['records_rejected']}\n"
+            f"  Duplicates Filtered:       {d['duplicates']}\n"
+            f"  Fresh (<=24h) Records:     {d['fresh_records']}\n"
+            f"  Stale Records:             {d['stale_records']}\n"
+            f"  Entity Match Hits:         {d['entity_matches']}\n"
+            f"  GitHub Stars Enriched:     {d['github_stars_enriched']}\n"
+            f"  Deterministic Extractions: {d['deterministic_extractions']}\n"
+            f"  LLM Extractions Attempted: {d['llm_extractions_attempted']}\n"
+            f"  LLM Extractions Skipped:   {d['llm_extractions_skipped']}\n"
+            f"  Gemini 429s:               {d['gemini_429s']}\n"
+            f"  LLM Fallbacks:             {d['llm_fallbacks']}\n"
             f"===================================="
         )
 
