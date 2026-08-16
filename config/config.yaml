@@ -22,7 +22,7 @@ llm:
     - "deepseek"
   providers:
     gemini:
-      model: "gemini-1.5-flash"
+      model: "gemini-3.5-flash"
       max_tokens: 4096
       temperature: 0.1
       rate_limit_per_min: 15

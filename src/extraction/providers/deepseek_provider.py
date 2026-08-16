@@ -3,7 +3,7 @@ import os
 import asyncio
 from typing import Type, Optional, TypeVar
 from pydantic import BaseModel
-from src.extraction.llm_provider import LLMProvider
+from src.extraction.llm_provider import LLMProvider, is_valid_api_key
 from src.utils.logger import logger
 
 T = TypeVar("T", bound=BaseModel)
@@ -11,13 +11,14 @@ T = TypeVar("T", bound=BaseModel)
 class DeepSeekProvider(LLMProvider):
     """DeepSeek Provider."""
 
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "deepseek-chat"):
+    def __init__(self, api_key: Optional[str] = None, model_name: Optional[str] = None):
         key = api_key or os.getenv("DEEPSEEK_API_KEY")
-        super().__init__(name="DeepSeekProvider", model_name=model_name, api_key=key)
+        model = model_name or os.getenv("DEEPSEEK_MODEL") or "deepseek-chat"
+        super().__init__(name="DeepSeekProvider", model_name=model, api_key=key)
 
     async def extract(self, text: str, schema_class: Type[T]) -> Optional[T]:
         if not self.api_key:
-            logger.warning("DeepSeek API key missing, skipping provider", extra={"component": self.name})
+            logger.warning("DeepSeek API key missing or invalid, skipping provider", extra={"component": self.name})
             return None
 
         system_prompt = self.build_system_prompt(schema_class)

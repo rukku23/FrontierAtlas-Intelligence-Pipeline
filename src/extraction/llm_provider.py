@@ -8,13 +8,26 @@ from src.utils.logger import logger
 
 T = TypeVar("T", bound=BaseModel)
 
+def is_valid_api_key(key: Optional[str]) -> bool:
+    """Check if an API key string is present, non-empty, and not a placeholder."""
+    if not key or not isinstance(key, str):
+        return False
+    k = key.strip()
+    if not k:
+        return False
+    k_lower = k.lower()
+    if k_lower.startswith("your_") or k_lower.endswith("_here") or "placeholder" in k_lower or "path/to" in k_lower:
+        return False
+    return True
+
+
 class LLMProvider(ABC):
     """Abstract base class for LLM providers (Gemini, Groq, DeepSeek)."""
 
     def __init__(self, name: str, model_name: str, api_key: Optional[str] = None):
         self.name = name
         self.model_name = model_name
-        self.api_key = api_key
+        self.api_key = api_key if is_valid_api_key(api_key) else None
 
     def sanitize_untrusted_input(self, raw_text: str) -> str:
         """Wrap untrusted web text in strict XML tags and strip potential injection markers."""

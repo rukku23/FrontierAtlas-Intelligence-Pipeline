@@ -288,3 +288,79 @@ class TestLLMIntegration:
         assert hasattr(main_module, '_llm_enrich_startup')
         assert hasattr(main_module, '_llm_enrich_product')
         assert hasattr(main_module, '_llm_extract_news_content')
+
+
+class TestGeminiProviderAndKeys:
+    """Verify GeminiProvider configuration, SDK model name passing, and placeholder key filtering."""
+
+    def test_gemini_provider_default_and_custom_model_config(self, monkeypatch):
+        from src.extraction.providers.gemini_provider import GeminiProvider
+        monkeypatch.delenv("GEMINI_MODEL", raising=False)
+        provider_default = GeminiProvider(api_key="valid-test-key-12345678")
+        assert provider_default.model_name == "gemini-3.5-flash"
+
+        monkeypatch.setenv("GEMINI_MODEL", "gemini-3.6-flash")
+        provider_env = GeminiProvider(api_key="valid-test-key-12345678")
+        assert provider_env.model_name == "gemini-3.6-flash"
+
+        provider_explicit = GeminiProvider(api_key="valid-test-key-12345678", model_name="gemini-3.5-flash")
+        assert provider_explicit.model_name == "gemini-3.5-flash"
+
+    def test_placeholder_and_empty_keys_ignored(self):
+        from src.extraction.llm_provider import is_valid_api_key
+        from src.extraction.providers.gemini_provider import GeminiProvider
+        from src.extraction.providers.groq_provider import GroqProvider
+        from src.extraction.providers.deepseek_provider import DeepSeekProvider
+
+        assert not is_valid_api_key(None)
+        assert not is_valid_api_key("")
+        assert not is_valid_api_key("   ")
+        assert not is_valid_api_key("your_gemini_api_key_here")
+        assert not is_valid_api_key("your_groq_api_key_here")
+        assert not is_valid_api_key("your_deepseek_api_key_here")
+        assert not is_valid_api_key("placeholder")
+        assert not is_valid_api_key("path/to/key.json")
+
+        assert is_valid_api_key("AIzaSyD_valid_key_12345")
+        assert is_valid_api_key("gsk_valid_groq_key_67890")
+
+        # Verify providers treat placeholders as None
+        g_prov = GeminiProvider(api_key="your_gemini_api_key_here")
+        assert g_prov.api_key is None
+
+        groq_prov = GroqProvider(api_key="your_groq_api_key_here")
+        assert groq_prov.api_key is None
+
+        ds_prov = DeepSeekProvider(api_key="your_deepseek_api_key_here")
+        assert ds_prov.api_key is None
+
+    @pytest.mark.asyncio
+    async def test_configured_model_passed_to_gemini_sdk(self, monkeypatch):
+        from unittest.mock import MagicMock, patch
+        from src.extraction.providers.gemini_provider import GeminiProvider
+        from pydantic import BaseModel
+
+        class SimpleSchema(BaseModel):
+            name: str
+
+        monkeypatch.setenv("GEMINI_MODEL", "gemini-3.6-flash")
+        provider = GeminiProvider(api_key="valid-dummy-api-key-12345")
+        assert provider.model_name == "gemini-3.6-flash"
+
+        mock_response = MagicMock()
+        mock_response.text = '{"name": "Test Entity"}'
+
+        mock_client = MagicMock()
+        mock_client.models.generate_content.return_value = mock_response
+
+        mock_genai = MagicMock()
+        mock_genai.Client.return_value = mock_client
+
+        with patch.dict("sys.modules", {"google": MagicMock(genai=mock_genai), "google.genai": mock_genai}):
+            result = await provider.extract("Sample text for extraction", SimpleSchema)
+            assert result is not None
+            assert result.name == "Test Entity"
+
+            mock_client.models.generate_content.assert_called_once()
+            called_kwargs = mock_client.models.generate_content.call_args.kwargs
+            assert called_kwargs.get("model") == "gemini-3.6-flash"

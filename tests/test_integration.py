@@ -9,8 +9,14 @@ async def test_full_pipeline_integration(tmp_path):
     test_db_file = tmp_path / "integration_atlas.db"
     test_db_url = f"sqlite:///{test_db_file}"
 
-    with patch("src.storage.db.get_config") as mock_cfg:
-        mock_cfg.return_value.get.side_effect = lambda key, default=None: test_db_url if "db_url" in key else default
+    with patch("src.storage.db.get_config") as mock_cfg, \
+         patch("src.utils.config.get_config") as mock_cfg_util:
+        def _mock_get(key, default=None):
+            if "db_url" in key:
+                return test_db_url
+            return default
+        mock_cfg.return_value.get.side_effect = _mock_get
+        mock_cfg_util.return_value.get.side_effect = _mock_get
 
         db = DatabaseStorage(db_url=test_db_url)
 
@@ -19,7 +25,8 @@ async def test_full_pipeline_integration(tmp_path):
             paper_limit=2,
             startup_limit=2,
             product_limit=2,
-            export_sheets=False
+            export_sheets=False,
+            db_url=test_db_url
         )
 
         # Metrics must show actual discovery (not vacuously >= 0)

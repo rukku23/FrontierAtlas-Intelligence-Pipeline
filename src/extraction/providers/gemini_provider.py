@@ -1,23 +1,24 @@
-"""Gemini LLM Provider implementation using google-genai or direct REST API."""
+"""Gemini LLM Provider implementation using google-genai package."""
 import os
 import asyncio
 from typing import Type, Optional, TypeVar
 from pydantic import BaseModel
-from src.extraction.llm_provider import LLMProvider
+from src.extraction.llm_provider import LLMProvider, is_valid_api_key
 from src.utils.logger import logger
 
 T = TypeVar("T", bound=BaseModel)
 
 class GeminiProvider(LLMProvider):
-    """Gemini 1.5 Flash Provider."""
+    """Gemini Flash Provider."""
 
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-1.5-flash"):
+    def __init__(self, api_key: Optional[str] = None, model_name: Optional[str] = None):
         key = api_key or os.getenv("GEMINI_API_KEY")
-        super().__init__(name="GeminiProvider", model_name=model_name, api_key=key)
+        model = model_name or os.getenv("GEMINI_MODEL") or "gemini-3.5-flash"
+        super().__init__(name="GeminiProvider", model_name=model, api_key=key)
 
     async def extract(self, text: str, schema_class: Type[T]) -> Optional[T]:
         if not self.api_key:
-            logger.warning("Gemini API key missing, skipping provider", extra={"component": self.name})
+            logger.warning("Gemini API key missing or invalid, skipping provider", extra={"component": self.name})
             return None
 
         system_prompt = self.build_system_prompt(schema_class)

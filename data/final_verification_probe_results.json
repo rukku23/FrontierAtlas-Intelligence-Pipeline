@@ -1,0 +1,93 @@
+{
+  "startups": {
+    "total_yc_catalog": 6179,
+    "ai_discovered": 1469,
+    "ai_valid": 1469,
+    "ai_unique": 1469,
+    "source_breakdown": {
+      "YC-OSS API (AI tags)": 1469
+    },
+    "provenance_valid": true
+  },
+  "products": {
+    "discovered": 500,
+    "valid": 500,
+    "unique": 490,
+    "company_associated": 500,
+    "pricing_breakdown": {
+      "UNKNOWN": 211,
+      "FREE": 289,
+      "PAID": 0,
+      "FREEMIUM": 0
+    },
+    "provenance_valid": true
+  },
+  "papers": {
+    "sample_size": 100,
+    "with_github": 10,
+    "without_github": 90,
+    "stars_enriched_sample": 10,
+    "provenance_valid": true
+  },
+  "news": {
+    "total_fresh": 3,
+    "current_utc": "2026-08-16T13:18:17.844490+00:00",
+    "source_breakdown": {
+      "TechCrunch AI": {
+        "count": 3,
+        "full_text_count": 3,
+        "avg_content_len": 0,
+        "samples": [
+          {
+            "title": "Woman claims her stepfather used Grok to transform childhood",
+            "pub_date": "2026-08-15T21:29:19+00:00",
+            "content_len": 1364
+          },
+          {
+            "title": "Anthropic shares more details about how Claude\u2019s new waterma",
+            "pub_date": "2026-08-15T18:58:39+00:00",
+            "content_len": 4426
+          },
+          {
+            "title": "SpaceX officially closes its Cursor acquisition",
+            "pub_date": "2026-08-15T16:30:00+00:00",
+            "content_len": 1207
+          }
+        ]
+      }
+    },
+    "provenance_valid": true
+  },
+  "jobs": {
+    "total_fresh": 2,
+    "source_breakdown": {
+      "WeWorkRemotely": {
+        "count": 2,
+        "avg_desc_len": 0,
+        "samples": [
+          {
+            "company": "Vercel",
+            "role": "Member of the Technical Staff, Internal Agent",
+            "pub_date": "2026-08-16T07:30:41+00:00",
+            "desc_len": 4845
+          },
+          {
+            "company": "Hightouch",
+            "role": "Application Security Lead",
+            "pub_date": "2026-08-16T07:30:32+00:00",
+            "desc_len": 5263
+          }
+        ]
+      }
+    },
+    "provenance_valid": true
+  },
+  "llm": {
+    "active_providers": [],
+    "has_active_keys": false
+  },
+  "google_sheets": {
+    "has_credentials": false,
+    "status": "EXPORTER AVAILABLE (DRY RUN TESTED)"
+  }
+}

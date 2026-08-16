@@ -119,7 +119,8 @@ async def run_pipeline(
     paper_limit: int = 1000,
     startup_limit: int = 1000,
     product_limit: int = 1000,
-    export_sheets: bool = True
+    export_sheets: bool = True,
+    db_url: Optional[str] = None
 ) -> PipelineMetrics:
     """Run the complete end-to-end FrontierAtlas intelligence pipeline.
 
@@ -133,7 +134,7 @@ async def run_pipeline(
     metrics = PipelineMetrics()
     logger.info("Starting FrontierAtlas Intelligence Pipeline...", extra={"component": "PipelineMain"})
 
-    db = DatabaseStorage()
+    db = DatabaseStorage(db_url=db_url)
     dedup = Deduplicator()
     resolver = EntityResolver()
     base_crawler = BaseAsyncCrawler()

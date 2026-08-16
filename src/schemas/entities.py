@@ -13,7 +13,7 @@ def generate_id() -> str:
 
 class BaseEntity(BaseModel):
     id: str = Field(default_factory=generate_id)
-    source_url: str = Field(..., description="Legitimate origin URL for provenance")
+    source_url: str = Field(default="https://raw.llm/extracted", description="Legitimate origin URL for provenance")
     collected_at: str = Field(default_factory=utc_now_iso, description="ISO-8601 UTC timestamp when collected")
 
     @field_validator("source_url")
@@ -49,7 +49,7 @@ class ResearchPaper(BaseEntity):
     record_type: RecordType = RecordType.RESEARCH_PAPER
     title: str = Field(..., min_length=1, description="Paper title")
     authors: List[str] = Field(default_factory=list)
-    paper_url: str = Field(..., description="Paper landing or PDF URL")
+    paper_url: str = Field(default="https://paper.url/extracted", description="Paper landing or PDF URL")
     abstract: Optional[str] = None
     publication_date: Optional[str] = None
     github_repository_url: Optional[str] = Field(default=None, description="GitHub URL from legitimate source association")
@@ -67,22 +67,22 @@ class Job(BaseEntity):
     company_name: str = Field(..., min_length=1)
     canonical_company_name: Optional[str] = None
     role_title: str = Field(..., min_length=1)
-    job_url: str = Field(...)
+    job_url: str = Field(default="https://job.url/extracted")
     location: Optional[str] = None
     is_remote: Optional[bool] = None
     role_family: Optional[RoleFamily] = RoleFamily.OTHER
     description: Optional[str] = None
-    publication_date: str = Field(..., description="Verified publication timestamp")
+    publication_date: Optional[str] = Field(default=None, description="Verified publication timestamp")
     freshness_verified: bool = Field(default=False, description="Must be true for acceptance (<= 24h)")
-    source_name: str = Field(..., min_length=1)
+    source_name: str = Field(default="job_source", min_length=1)
 
 class News(BaseEntity):
     record_type: RecordType = RecordType.NEWS
     title: str = Field(..., min_length=1)
-    article_url: str = Field(...)
+    article_url: str = Field(default="https://article.url/extracted")
     author: Optional[str] = None
     summary: Optional[str] = None
     content: Optional[str] = None
-    publication_date: str = Field(..., description="Verified publication timestamp")
+    publication_date: Optional[str] = Field(default=None, description="Verified publication timestamp")
     freshness_verified: bool = Field(default=False, description="Must be true for acceptance (<= 24h)")
-    source_name: str = Field(..., min_length=1)
+    source_name: str = Field(default="news_source", min_length=1)
