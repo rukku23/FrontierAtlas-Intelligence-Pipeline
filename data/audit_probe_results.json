@@ -1,0 +1,195 @@
+{
+  "startups": [
+    {
+      "name": "sentence-transformers",
+      "source_url": "https://huggingface.co/sentence-transformers",
+      "description": "AI Organization active on Hugging Face",
+      "employee_count": null,
+      "founding_year": null,
+      "categories": [
+        "AI",
+        "Machine Learning"
+      ]
+    },
+    {
+      "name": "google-bert",
+      "source_url": "https://huggingface.co/google-bert",
+      "description": "AI Organization active on Hugging Face",
+      "employee_count": null,
+      "founding_year": null,
+      "categories": [
+        "AI",
+        "Machine Learning"
+      ]
+    },
+    {
+      "name": "cross-encoder",
+      "source_url": "https://huggingface.co/cross-encoder",
+      "description": "AI Organization active on Hugging Face",
+      "employee_count": null,
+      "founding_year": null,
+      "categories": [
+        "AI",
+        "Machine Learning"
+      ]
+    },
+    {
+      "name": "BAAI",
+      "source_url": "https://huggingface.co/BAAI",
+      "description": "AI Organization active on Hugging Face",
+      "employee_count": null,
+      "founding_year": null,
+      "categories": [
+        "AI",
+        "Machine Learning"
+      ]
+    },
+    {
+      "name": "google",
+      "source_url": "https://huggingface.co/google",
+      "description": "AI Organization active on Hugging Face",
+      "employee_count": null,
+      "founding_year": null,
+      "categories": [
+        "AI",
+        "Machine Learning"
+      ]
+    }
+  ],
+  "products": [
+    {
+      "name": "deepsite",
+      "source_url": "https://huggingface.co/spaces/enzostvs/deepsite",
+      "description": "AI Web Application / Space by enzostvs (SDK: docker)",
+      "pricing_type": "PricingType.FREE",
+      "company_name": "enzostvs"
+    },
+    {
+      "name": "open_llm_leaderboard",
+      "source_url": "https://huggingface.co/spaces/open-llm-leaderboard/open_llm_leaderboard",
+      "description": "AI Web Application / Space by open-llm-leaderboard (SDK: docker)",
+      "pricing_type": "PricingType.FREE",
+      "company_name": "open-llm-leaderboard"
+    },
+    {
+      "name": "ai-comic-factory",
+      "source_url": "https://huggingface.co/spaces/jbilcke-hf/ai-comic-factory",
+      "description": "AI Web Application / Space by jbilcke-hf (SDK: docker)",
+      "pricing_type": "PricingType.FREE",
+      "company_name": "jbilcke-hf"
+    },
+    {
+      "name": "Kolors-Virtual-Try-On",
+      "source_url": "https://huggingface.co/spaces/Kwai-Kolors/Kolors-Virtual-Try-On",
+      "description": "AI Web Application / Space by Kwai-Kolors (SDK: gradio)",
+      "pricing_type": "PricingType.FREE",
+      "company_name": "Kwai-Kolors"
+    },
+    {
+      "name": "FLUX.1-dev",
+      "source_url": "https://huggingface.co/spaces/black-forest-labs/FLUX.1-dev",
+      "description": "AI Web Application / Space by black-forest-labs (SDK: gradio)",
+      "pricing_type": "PricingType.FREE",
+      "company_name": "black-forest-labs"
+    }
+  ],
+  "papers": [
+    {
+      "title": "AutoDesign: Meta-Harness Optimization for Long-Horizon Agentic Design",
+      "authors": [
+        "Yaxin Luo",
+        "Haobin Jiang",
+        "Jialv Zou"
+      ],
+      "paper_url": "http://arxiv.org/abs/2608.13560v1",
+      "github_url": "https://github.com/Yaxin9Luo/AutoDesign",
+      "github_stars": null,
+      "pub_date": "2026-08-13T17:59:57Z"
+    },
+    {
+      "title": "OmniScientist: An Omni-Modal Omni-Discipline AI Scientist",
+      "authors": [
+        "Bobo Li",
+        "Hao Fei",
+        "Tianjie Ju"
+      ],
+      "paper_url": "http://arxiv.org/abs/2608.13558v1",
+      "github_url": null,
+      "github_stars": null,
+      "pub_date": "2026-08-13T17:59:52Z"
+    },
+    {
+      "title": "HumanTracker: Towards Comprehensive and Human-Aligned Motion Tracking Benchmark",
+      "authors": [
+        "Dairu Liu",
+        "Zekun Qi",
+        "Jiayu Zeng"
+      ],
+      "paper_url": "http://arxiv.org/abs/2608.13555v1",
+      "github_url": null,
+      "github_stars": null,
+      "pub_date": "2026-08-13T17:59:40Z"
+    },
+    {
+      "title": "Defensive Boosting for Online Probabilistic Forecasting",
+      "authors": [
+        "Georgy Noarov",
+        "Aaron Roth"
+      ],
+      "paper_url": "http://arxiv.org/abs/2608.13554v1",
+      "github_url": null,
+      "github_stars": null,
+      "pub_date": "2026-08-13T17:59:35Z"
+    },
+    {
+      "title": "Exponential Convex Calibration Dimension for the Multi-Label Jaccard Measure",
+      "authors": [
+        "Mingyuan Zhang"
+      ],
+      "paper_url": "http://arxiv.org/abs/2608.13549v1",
+      "github_url": null,
+      "github_stars": null,
+      "pub_date": "2026-08-13T17:59:17Z"
+    }
+  ],
+  "news": {
+    "TechCrunch AI": {
+      "fresh": 3,
+      "samples": [
+        {
+          "title": "Woman claims her stepfather used Grok to transform childhood photo into explicit",
+          "pub_date": "2026-08-15T21:29:19+00:00",
+          "has_content": true,
+          "content_length": 98
+        },
+        {
+          "title": "Anthropic shares more details about how Claude\u2019s new watermarks will work",
+          "pub_date": "2026-08-15T18:58:39+00:00",
+          "has_content": true,
+          "content_length": 102
+        }
+      ]
+    }
+  },
+  "jobs": {
+    "WeWorkRemotely": {
+      "fresh": 2,
+      "samples": [
+        {
+          "company": "Vercel",
+          "role": "Member of the Technical Staff, Internal Agent",
+          "pub_date": "2026-08-16T07:30:41+00:00",
+          "has_description": true,
+          "desc_length": 4845
+        },
+        {
+          "company": "Hightouch",
+          "role": "Application Security Lead",
+          "pub_date": "2026-08-16T07:30:32+00:00",
+          "has_description": true,
+          "desc_length": 5263
+        }
+      ]
+    }
+  }
+}

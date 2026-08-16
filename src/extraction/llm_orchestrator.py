@@ -16,11 +16,12 @@ class LLMOrchestrator:
     """Orchestrates 3-tier LLM fallback (Gemini -> Groq -> DeepSeek) with 413 chunking and 429 handling."""
 
     def __init__(self, providers: Optional[List[LLMProvider]] = None):
-        self.providers = providers or [
-            GeminiProvider(),
-            GroqProvider(),
-            DeepSeekProvider()
-        ]
+        if providers is not None:
+            self.providers = providers
+        else:
+            # Only include providers that have API keys configured
+            candidates = [GeminiProvider(), GroqProvider(), DeepSeekProvider()]
+            self.providers = [p for p in candidates if p.api_key]
 
     def _is_rate_limit_error(self, exc: Exception) -> bool:
         """Check if exception represents a 429 Rate Limit error."""
