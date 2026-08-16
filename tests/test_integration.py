@@ -22,8 +22,9 @@ async def test_full_pipeline_integration(tmp_path):
             export_sheets=False
         )
 
-        assert metrics.records_discovered >= 0
-        assert metrics.records_processed >= 0
+        # Metrics must show actual discovery (not vacuously >= 0)
+        assert metrics.records_discovered > 0, "Pipeline must discover at least 1 record"
+        assert metrics.records_processed > 0, "Pipeline must process at least 1 record"
 
         # Verify tables were created and queries succeed
         session = db.get_session()
@@ -32,8 +33,8 @@ async def test_full_pipeline_integration(tmp_path):
         product_count = session.query(ProductModel).count()
         job_count = session.query(JobModel).count()
         news_count = session.query(NewsModel).count()
+        total = paper_count + startup_count + product_count + job_count + news_count
         session.close()
 
-        assert paper_count >= 0
-        assert startup_count >= 0
-        assert product_count >= 0
+        # At least some records must have been persisted to the database
+        assert total > 0, f"Database must contain records (papers={paper_count}, startups={startup_count}, products={product_count}, jobs={job_count}, news={news_count})"

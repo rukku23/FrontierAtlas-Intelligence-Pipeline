@@ -67,9 +67,8 @@ FrontierAtlas/
 │   │       ├── groq_provider.py
 │   │       └── deepseek_provider.py
 │   ├── schemas/
-│   │   ├── base.py
 │   │   ├── enums.py            # PricingType, RoleFamily, RecordType
-│   │   └── entities.py         # Pydantic v2 Startup, Product, Paper, Job, News models
+│   │   └── entities.py         # Pydantic v2 Startup, Product, Paper, Job, News + BaseEntity models
 │   ├── storage/
 │   │   ├── db.py               # SQLAlchemy ORM models & database storage
 │   │   └── sheets_sync.py      # 6-tab Google Sheets exporter

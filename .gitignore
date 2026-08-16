@@ -35,3 +35,9 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Accidental test artifacts
+MagicMock/
+
+# Agent workspace
+.agents/
